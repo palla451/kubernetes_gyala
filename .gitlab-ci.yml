@@ -1,0 +1,49 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  DOCKER_REGISTRY: registry.gitlab.com/palla451/docker_gyala
+  DOCKER_AUTH_CONFIG: '{"auths":{"https://registry.gitlab.com":{"auth":"<TOKEN>"}}}' # Sostituisci con il tuo TOKEN
+  PROJECT_NAME: my-project
+
+# Build immagini per tutti i servizi
+build-backend:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  script:
+    - docker build -f ./backend/Dockerfile.backend -t $DOCKER_REGISTRY/$PROJECT_NAME/backend-app:latest ./www
+    - docker push $DOCKER_REGISTRY/$PROJECT_NAME/backend-app:latest
+
+build-frontend:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  script:
+    - docker build -f ./frontend/Dockerfile.frontend -t $DOCKER_REGISTRY/$PROJECT_NAME/frontend-app:latest ./www/frontend
+    - docker push $DOCKER_REGISTRY/$PROJECT_NAME/frontend-app:latest
+
+build-proxy:
+  stage: build
+  image: docker:24
+  services:
+    - docker:24-dind
+  script:
+    - docker pull nginx:latest
+    - docker tag nginx:latest $DOCKER_REGISTRY/$PROJECT_NAME/proxy-app:latest
+    - docker push $DOCKER_REGISTRY/$PROJECT_NAME/proxy-app:latest
+
+# Deploy dei container su server remoto
+deploy:
+  stage: deploy
+  image: alpine
+  before_script:
+    - apk add --no-cache openssh
+  script:
+    - scp docker-compose.yml user@server:/path/to/deployment
+    - ssh user@server "cd /path/to/deployment && docker-compose pull && docker-compose up -d"
+  only:
+    - main

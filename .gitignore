@@ -1,0 +1,7 @@
+/.idea/
+/www/
+/database/mysql/
+/logs/frontend
+/logs/nginx
+/logs/proxy
+
